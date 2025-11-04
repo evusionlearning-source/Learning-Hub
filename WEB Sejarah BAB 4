@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eksplorasi Organisasi Pergerakan Nasional</title>
+    <!-- Chosen Palette: Warm Neutral Harmony (Background: neutral-50, Cards: white, Text: neutral-800, Accents: blue-700, red-700, indigo-700, green-700, amber-700) -->
+    <!-- Application Structure Plan: Saya merancang aplikasi ini sebagai dasbor eksplorasi. Struktur ini terdiri dari tiga bagian utama: 1) Intro & KPI Ringkasan untuk gambaran cepat. 2) Visualisasi Analisis (Bagan Donat) untuk perbandingan kategori utama (Corak & Fokus). 3) Galeri Eksplorasi Interaktif, yang merupakan inti aplikasi. Bagian ini memiliki kontrol filter (untuk Corak, Fokus, Status) yang secara dinamis memperbarui kisi kartu detail organisasi. Struktur ini dipilih karena mengubah data dari tabel pasif menjadi alat analisis aktif, memungkinkan pengguna untuk menemukan pola dan membandingkan kelompok organisasi dengan mudah, yang jauh lebih bermanfaat daripada tabel statis. -->
+    <!-- Visualization & Content Choices: 1. KPI (Goal: Inform) -> HTML/Tailwind (Angka besar). Justifikasi: Memberikan gambaran umum tingkat tinggi. 2. Bagan Corak Perjuangan (Goal: Compare) -> Chart.js Donut (Canvas). Justifikasi: Menunjukkan proporsi strategi (Moderat vs Radikal) secara visual. 3. Bagan Fokus Utama (Goal: Compare) -> Chart.js Donut (Canvas). Justifikasi: Menunjukkan sebaran area fokus organisasi (Politik, Sosial, dll). 4. Galeri Kartu Interaktif (Goal: Organize/Inform) -> HTML/Tailwind + JS Filter. Justifikasi: Ini adalah alat utama untuk eksplorasi mendalam, memungkinkan pengguna memfilter dan melihat detail kualitatif (tujuan, pendiri) berdasarkan kategori. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FAFAFA; /* neutral-50 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .filter-btn-group button.active {
+            background-color: #262626; /* neutral-800 */
+            color: #FFFFFF;
+            font-weight: 600;
+        }
+        .org-card {
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+            transform: scale(1);
+        }
+        .org-card.hidden {
+            opacity: 0;
+            transform: scale(0.95);
+            display: none;
+        }
+    </style>
+</head>
+<body class="text-neutral-800">
+
+    <div class="max-w-7xl mx-auto p-4 md:p-8">
+        
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-neutral-900 mb-4">Eksplorasi Organisasi Pergerakan Nasional</h1>
+            <p class="text-lg text-neutral-600 max-w-3xl mx-auto">
+                Aplikasi interaktif ini mengubah data historis organisasi pergerakan nasional Indonesia (1908-1935) menjadi dasbor yang dapat dijelajahi. Analisis, filter, dan bandingkan berbagai organisasi untuk memahami lanskap perjuangan kemerdekaan.
+            </p>
+        </header>
+
+        <section id="kpi" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                <span class="text-5xl font-bold text-blue-700">10</span>
+                <p class="text-lg font-semibold text-neutral-700 mt-2">Total Organisasi</p>
+                <p class="text-neutral-600">Dianalisis dalam periode ini.</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                <span class="text-5xl font-bold text-indigo-700">1908 - 1935</span>
+                <p class="text-lg font-semibold text-neutral-700 mt-2">Periode Pergerakan Awal</p>
+                <p class="text-neutral-600">Dari Budi Utomo hingga Parindra.</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-lg text-center">
+                <span class="text-5xl font-bold text-green-700">5</span>
+                <p class="text-lg font-semibold text-neutral-700 mt-2">Fokus Utama Perjuangan</p>
+                <p class="text-neutral-600">Politik, Sosial-Budaya, Agama, Pendidikan, & Ekonomi.</p>
+            </div>
+        </section>
+
+        <section id="analysis-charts" class="mb-12">
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold mb-3">Analisis Visual</h2>
+                <p class="text-neutral-600 max-w-2xl mx-auto">
+                    Bagan berikut memvisualisasikan sebaran strategi (corak) perjuangan dan area fokus utama dari 10 organisasi kunci.
+                </p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold text-center mb-4">Sebaran Corak Perjuangan</h3>
+                    <div class="chart-container" style="max-width: 400px; height: 300px; max-height: 350px;">
+                        <canvas id="corakChart"></canvas>
+                    </div>
+                    <p class="text-neutral-600 text-sm text-center mt-4">
+                        Menunjukkan perbandingan antara organisasi yang memilih jalur moderat/kooperatif dengan yang radikal/non-kooperatif.
+                    </p>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold text-center mb-4">Sebaran Fokus Utama</h3>
+                    <div class="chart-container" style="max-width: 400px; height: 300px; max-height: 350px;">
+                        <canvas id="fokusChart"></canvas>
+                    </div>
+                     <p class="text-neutral-600 text-sm text-center mt-4">
+                        Menunjukkan area yang menjadi prioritas perjuangan, dari politik hingga pendidikan dan agama.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="explorer" class="bg-white p-6 md:p-8 rounded-xl shadow-lg">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold mb-3">Galeri Eksplorasi Organisasi</h2>
+                <p class="text-neutral-600 max-w-3xl mx-auto">
+                    Gunakan filter di bawah untuk menjelajahi organisasi berdasarkan strategi, fokus, atau status warisannya. Klik tombol untuk memfilter kartu di bawah.
+                </p>
+            </div>
+
+            <div id="filters" class="flex flex-col gap-4 mb-8">
+                <div class="flex flex-wrap items-center gap-2 filter-btn-group" data-filter-group="corak">
+                    <span class="font-semibold text-neutral-700 w-full sm:w-auto">Corak/Strategi:</span>
+                    <button class="filter-btn active py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="semua">Semua</button>
+                    <button class="filter-btn py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="moderat">Moderat</button>
+                    <button class="filter-btn py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="kooperatif">Kooperatif</button>
+                    <button class="filter-btn py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="radikal">Radikal</button>
+                    <button class="filter-btn py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="non-kooperatif">Non-Kooperatif</button>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 filter-btn-group" data-filter-group="fokus">
+                    <span class="font-semibold text-neutral-700 w-full sm:w-auto">Fokus Utama:</span>
+                    <button class="filter-btn active py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="semua">Semua</button>
+                    <button class="filter-btn py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="politik">Politik</button>
+                    <button class="filter-btn py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="sosial-budaya">Sosial-Budaya</D>
+                    <button class="filter-btn py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="agama">Agama</button>
+                    <button class="filter-btn py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="pendidikan">Pendidikan</button>
+                    <button class="filter-btn py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="ekonomi">Ekonomi</button>
+                </div>
+                 <div class="flex flex-wrap items-center gap-2 filter-btn-group" data-filter-group="status">
+                    <span class="font-semibold text-neutral-700 w-full sm:w-auto">Status Warisan:</span>
+                    <button class="filter-btn active py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="semua">Semua</L>
+                    <button class="filter-btn py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="masih-ada">Masih Ada</button>
+                    <button class="filter-btn py-2 px-4 rounded-full text-sm font-medium bg-neutral-100 text-neutral-800 hover:bg-neutral-200" data-filter="bubar">Bubar/Fusi</button>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <p class="text-neutral-700 text-lg">Menampilkan <span id="org-count" class="font-bold text-neutral-900">10</span> dari 10 organisasi.</p>
+            </div>
+
+            <div id="org-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        const organizations = [
+            {
+                nama: "Budi Utomo",
+                tgl: "20 Mei 1908",
+                pendiri: "Dr. Soetomo & Mahasiswa STOVIA (atas gagasan dr. Wahidin S.)",
+                tujuan: [
+                    "Memajukan pengajaran dan kebudayaan.",
+                    "Memperbaiki nasib rakyat melalui pendidikan.",
+                    "Mengembangkan kebudayaan Jawa & Madura (awalnya)."
+                ],
+                corak: "Moderat, Kooperatif",
+                fokus: "Sosial-Budaya",
+                status: "Bubar/Fusi"
+            },
+            {
+                nama: "Sarekat Dagang Islam (SDI)",
+                tgl: "1911",
+                pendiri: "H. Samanhudi",
+                tujuan: [
+                    "Melindungi pedagang Muslim pribumi dari monopoli asing.",
+                    "Mengembangkan jiwa dagang umat Islam.",
+                    "Memajukan kepentingan rohani dan jasmani penduduk asli."
+                ],
+                corak: "Kooperatif",
+                fokus: "Ekonomi, Agama",
+                status: "Bubar/Fusi"
+            },
+            {
+                nama: "Sarekat Islam (SI)",
+                tgl: "1912",
+                pendiri: "H.O.S. Tjokroaminoto (Pemimpin utama)",
+                tujuan: [
+                    "Mengembangkan ekonomi rakyat berbasis Islam.",
+                    "Memajukan pengajaran dan agama Islam.",
+                    "Memperjuangkan pemerintahan sendiri (kemerdekaan)."
+                ],
+                corak: "Awal: Kooperatif, Akhir: Non-Kooperatif/Radikal",
+                fokus: "Ekonomi, Agama, Politik",
+                status: "Bubar/Fusi"
+            },
+            {
+                nama: "Indische Partij (IP)",
+                tgl: "25 Des 1912",
+                pendiri: "Tiga Serangkai (Douwes Dekker, Tjipto Mangoenkoesoemo, Soewardi Soerjaningrat)",
+                tujuan: [
+                    "Membangun patriotisme semua penduduk Hindia (Indiers).",
+                    "Menuntut kemerdekaan Hindia Belanda.",
+                    "Menghapuskan diskriminasi rasial."
+                ],
+                corak: "Radikal, Non-Kooperatif",
+                fokus: "Politik",
+                status: "Bubar/Fusi"
+            },
+            {
+                nama: "Perhimpunan Indonesia (PI)",
+                tgl: "1908 (Indische Vereeniging), 1925 (Nama PI)",
+                pendiri: "Moh. Hatta, Ahmad Soebardjo, Iwa Koesoemasoemantri, dll.",
+                tujuan: [
+                    "Menuntut Indonesia Merdeka.",
+                    "Membangun persatuan nasional (Nasionalisme).",
+                    "Menggunakan asas non-kooperasi."
+                ],
+                corak: "Radikal, Non-Kooperatif",
+                fokus: "Politik",
+                status: "Bubar/Fusi"
+            },
+            {
+                nama: "Muhammadiyah",
+                tgl: "18 Nov 1912",
+                pendiri: "K.H. Ahmad Dahlan",
+                tujuan: [
+                    "Memurnikan ajaran Islam (kembali ke Qur'an & Hadits).",
+                    "Memajukan pendidikan modern berbasis Islam.",
+                    "Mengembangkan kesejahteraan sosial (RS, Panti Asuhan)."
+                ],
+                corak: "Moderat",
+                fokus: "Sosial-Keagamaan, Pendidikan",
+                status: "Masih Ada"
+            },
+            {
+                nama: "PKI (Partai Komunis Indonesia)",
+                tgl: "23 Mei 1920 (dari ISDV/SI Merah)",
+                pendiri: "Semaun, Darsono, Henk Sneevliet (ISDV)",
+                tujuan: [
+                    "Menghapuskan kapitalisme dan kolonialisme.",
+                    "Mendirikan pemerintahan komunis.",
+                    "Mengobarkan perjuangan kelas (revolusi)."
+                ],
+                corak: "Radikal, Non-Kooperatif",
+                fokus: "Politik",
+                status: "Bubar/Fusi"
+            },
+            {
+                nama: "NU (Nahdlatul Ulama)",
+                tgl: "31 Jan 1926",
+                pendiri: "K.H. Hasyim Asy'ari & ulama tradisionalis",
+                tujuan: [
+                    "Mempertahankan ajaran Islam Ahlussunnah wal Jama'ah.",
+                    "Mengembangkan pendidikan (pesantren) dan dakwah.",
+                    "Meningkatkan kesejahteraan sosial-ekonomi umat."
+                ],
+                corak: "Moderat",
+                fokus: "Sosial-Keagamaan, Pendidikan, Ekonomi",
+                status: "Masih Ada"
+            },
+            {
+                nama: "Taman Siswa",
+                tgl: "3 Juli 1922",
+                pendiri: "Ki Hajar Dewantara (Soewardi Soerjaningrat)",
+                tujuan: [
+                    "Menyelenggarakan pendidikan nasional yang merdeka.",
+                    "Mengembangkan kebudayaan bangsa.",
+                    "Mendidik generasi muda berjiwa kebangsaan & mandiri."
+                ],
+                corak: "Non-Kooperatif",
+                fokus: "Pendidikan, Sosial-Budaya",
+                status: "Masih Ada"
+            },
+            {
+                nama: "Parindra (Partai Indonesia Raya)",
+                tgl: "Des 1935",
+                pendiri: "Dr. Soetomo (Fusi Budi Utomo & PBI)",
+                tujuan: [
+                    "Mencapai Indonesia Raya (merdeka).",
+                    "Mengembangkan ekonomi nasional (swadesi).",
+                    "Bekerjasama dengan Belanda di Volksraad."
+                ],
+                corak: "Moderat, Kooperatif",
+                fokus: "Politik, Ekonomi",
+                status: "Bubar/Fusi"
+            }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const orgGrid = document.getElementById('org-grid');
+            const orgCount = document.getElementById('org-count');
+            const filterGroups = document.querySelectorAll('.filter-btn-group');
+            
+            let currentFilters = {
+                corak: 'semua',
+                fokus: 'semua',
+                status: 'semua'
+            };
+
+            const corakColors = {
+                "moderat": "bg-blue-100 text-blue-800",
+                "kooperatif": "bg-blue-100 text-blue-800",
+                "radikal": "bg-red-100 text-red-800",
+                "non-kooperatif": "bg-red-100 text-red-800",
+                "default": "bg-gray-100 text-gray-800"
+            };
+
+            const fokusColors = {
+                "politik": "bg-indigo-100 text-indigo-800",
+                "sosial-budaya": "bg-green-100 text-green-800",
+                "agama": "bg-amber-100 text-amber-800",
+                "pendidikan": "bg-purple-100 text-purple-800",
+                "ekonomi": "bg-pink-100 text-pink-800",
+                "default": "bg-gray-100 text-gray-800"
+            };
+
+            function getTagColor(tag, type) {
+                const colors = type === 'corak' ? corakColors : fokusColors;
+                return colors[tag.toLowerCase().replace(/ /g, '-')] || colors.default;
+            }
+
+            function normalize(str) {
+                return str.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ');
+            }
+            
+            function parseDataAttributes(org) {
+                let corakData = normalize(org.corak.split('(')[0].replace(/,/g, ' ').replace(/:/g, ' '));
+                let fokusData = normalize(org.fokus.replace(/,/g, ' '));
+                let statusData = org.status.toLowerCase().replace(/ /g, '-');
+                
+                return {
+                    corak: corakData.join(' '),
+                    fokus: fokusData.join(' '),
+                    status: statusData.includes('masih-ada') ? 'masih-ada' : 'bubar'
+                };
+            }
+
+            function renderCards() {
+                orgGrid.innerHTML = '';
+                organizations.forEach(org => {
+                    const dataAttrs = parseDataAttributes(org);
+                    
+                    const corakTags = org.corak.split('(')[0].replace(/,/g, ' ').replace(/:/g, ' ').trim().split(' ')
+                                     .filter(t => t.length > 0)
+                                     .map(tag => `<span class="text-xs font-medium px-3 py-1 rounded-full ${getTagColor(tag, 'corak')}">${tag}</span>`).join(' ');
+                    
+                    const fokusTags = org.fokus.split(', ')
+                                     .map(tag => `<span class="text-xs font-medium px-3 py-1 rounded-full ${getTagColor(tag, 'fokus')}">${tag.replace('Sosial-Keagamaan', 'Sosial-Agama')}</span>`).join(' ');
+
+                    const card = `
+                        <div class="org-card bg-white rounded-xl shadow-lg p-6 flex flex-col border border-transparent hover:border-neutral-300" 
+                             data-corak="${dataAttrs.corak}" 
+                             data-fokus="${dataAttrs.fokus}" 
+                             data-status="${dataAttrs.status}">
+                            
+                            <h3 class="text-2xl font-bold mb-2">${org.nama}</h3>
+                            <p class="text-sm text-neutral-600 mb-1"><span class="font-semibold">Didirikan:</span> ${org.tgl}</p>
+                            <p class="text-sm text-neutral-600 mb-4"><span class="font-semibold">Pendiri:</span> ${org.pendiri}</p>
+                            
+                            <p class="text-sm font-semibold text-neutral-700 mb-2">Tujuan Utama:</p>
+                            <ul class="list-disc list-inside text-neutral-600 space-y-1 text-sm mb-6">
+                                ${org.tujuan.map(t => `<li>${t}</li>`).join('')}
+                            </ul>
+                            
+                            <div class="mt-auto pt-4 border-t border-neutral-200 flex flex-col gap-3">
+                                <div class="flex flex-wrap gap-2">
+                                    ${corakTags}
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    ${fokusTags}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    orgGrid.innerHTML += card;
+                });
+            }
+            
+            function applyFilters() {
+                let count = 0;
+                const cards = document.querySelectorAll('.org-card');
+                
+                cards.forEach(card => {
+                    const showCorak = currentFilters.corak === 'semua' || card.dataset.corak.includes(currentFilters.corak);
+                    const showFokus = currentFilters.fokus === 'semua' || card.dataset.fokus.includes(currentFilters.fokus);
+                    const showStatus = currentFilters.status === 'semua' || card.dataset.status.includes(currentFilters.status);
+                    
+                    if (showCorak && showFokus && showStatus) {
+                        card.classList.remove('hidden');
+                        count++;
+                    } else {
+                        card.classList.add('hidden');
+                    }
+                });
+                
+                orgCount.textContent = count;
+            }
+
+            filterGroups.forEach(group => {
+                const buttons = group.querySelectorAll('.filter-btn');
+                buttons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const filterGroup = group.dataset.filterGroup;
+                        const filterValue = button.dataset.filter;
+                        
+                        currentFilters[filterGroup] = filterValue;
+                        
+                        buttons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        
+                        applyFilters();
+                    });
+                });
+            });
+
+            function renderCharts() {
+                let corakCounts = { moderat: 0, radikal: 0 };
+                let fokusCounts = { politik: 0, "sosial-budaya": 0, agama: 0, pendidikan: 0, ekonomi: 0 };
+
+                organizations.forEach(org => {
+                    const dataAttrs = parseDataAttributes(org);
+                    if (dataAttrs.corak.includes('radikal') || dataAttrs.corak.includes('non-kooperatif')) {
+                        corakCounts.radikal++;
+                    } else if (dataAttrs.corak.includes('moderat') || dataAttrs.corak.includes('kooperatif')) {
+                        corakCounts.moderat++;
+                    }
+                    
+                    if (dataAttrs.fokus.includes('politik')) fokusCounts.politik++;
+                    if (dataAttrs.fokus.includes('sosial-budaya') || dataAttrs.fokus.includes('sosial-keagamaan')) fokusCounts["sosial-budaya"]++;
+                    if (dataAttrs.fokus.includes('agama') || dataAttrs.fokus.includes('sosial-keagamaan')) fokusCounts.agama++;
+                    if (dataAttrs.fokus.includes('pendidikan')) fokusCounts.pendidikan++;
+                    if (dataAttrs.fokus.includes('ekonomi')) fokusCounts.ekonomi++;
+                });
+
+                const corakCtx = document.getElementById('corakChart').getContext('2d');
+                new Chart(corakCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Moderat / Kooperatif', 'Radikal / Non-Kooperatif'],
+                        datasets: [{
+                            data: [corakCounts.moderat, corakCounts.radikal],
+                            backgroundColor: ['#3B82F6', '#EF4444'], // blue-600, red-500
+                            borderColor: '#FFFFFF',
+                            borderWidth: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            }
+                        }
+                    }
+                });
+
+                const fokusCtx = document.getElementById('fokusChart').getContext('2d');
+                new Chart(fokusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Politik', 'Sosial-Budaya/Agama', 'Pendidikan', 'Ekonomi'],
+                        datasets: [{
+                            data: [fokusCounts.politik, (fokusCounts["sosial-budaya"] + fokusCounts.agama) / 2, fokusCounts.pendidikan, fokusCounts.ekonomi],
+                            backgroundColor: ['#6366F1', '#10B981', '#A855F7', '#EC4899'], // indigo-500, green-500, purple-500, pink-500
+                            borderColor: '#FFFFFF',
+                            borderWidth: 4
+                        }]
+                    },
+                     options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            }
+                        }
+                    }
+                });
+            }
+
+            renderCards();
+            renderCharts();
+        });
+    </script>
+</body>
+</html>
+
